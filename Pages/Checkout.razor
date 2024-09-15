@@ -4,45 +4,49 @@
 @inject NavigationManager NavigationManager
 
 <div class="main">
-    <div class="checkout-cols">
-        <div class="checkout-order-details">
-            <h4>Review order</h4>
-            @foreach (var pizza in Order.Pizzas)
-            {
-                <p>
-                    <strong>
-                        @(pizza.Size)"
-                        @pizza.Special.Name
-                        (£@pizza.GetFormattedTotalPrice())
-                    </strong>
-                </p>
-            }
+    <EditForm Model="_Order.DeliveryAddress" OnValidSubmit="PlaceOrder" OnInvalidSubmit="ShowError"> 
+        <div class="checkout-cols">
 
-            <p>
-                <strong>
-                    Total price:
-                    £@Order.GetFormattedTotalPrice()
-                </strong>
-            </p>
+            <div class="checkout-order-details">
+                <h4>Review order</h4>
+                <OrderReview Order="_Order"/>
+            </div>
+            <div class="checkout-delivery-address">
+                <h4>Deliver to...</h4>
+                @if (_isError)
+                {
+                    <div class="alert alert-danger">Please enter a name and address.</div>
+                }
+                <AddressEditor Address="_Order.DeliveryAddress" />
+            </div>
         </div>
-    </div>
 
-    <button class="checkout-button btn btn-warning" @onclick="PlaceOrder" disabled=@isSubmitting>
-      Place order
-    </button>
+        <button class="checkout-button btn btn-warning" disabled=@_isSubmitting>
+            Place order
+        </button>
+
+        <DataAnnotationsValidator />
+    </EditForm>
 </div>
 
 @code {
-    Order Order => OrderState.Order;
-    bool isSubmitting;
+    Order _Order => OrderState.Order;
+    bool _isSubmitting;
 
-    async Task PlaceOrder()
+    bool _isError;
+
+    private async Task PlaceOrder()
     {
-        isSubmitting = true;
+        _isError = false;
+        _isSubmitting = true;
         var response = await HttpClient.PostAsJsonAsync(NavigationManager.BaseUri + "orders", OrderState.Order);
         var newOrderId= await response.Content.ReadFromJsonAsync<int>();
         OrderState.ResetOrder();
         NavigationManager.NavigateTo($"myorders/{newOrderId}");
     } 
 
+    private void ShowError()
+    {
+        _isError = true;
+    }
 }
